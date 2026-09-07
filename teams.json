@@ -61,14 +61,5 @@
     "stadium_ru": "",
     "stadium_sr": "",
     "season": true
-  },
-  {
-    "id": "fk_test_probnij_pian",
-    "ru": "ФК Тест Пробный 2",
-    "sr": "FK Test Probni 2",
-    "logo": "fk_test_probnij_pian.png",
-    "season": false,
-    "stadium_ru": "Тестовый Стадион",
-    "stadium_sr": "Testovij Stadion"
   }
 ]
