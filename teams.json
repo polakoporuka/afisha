@@ -1,0 +1,65 @@
+[
+  {
+    "id": "miljakovac",
+    "ru": "ФК Миляковац",
+    "sr": "FK Miljakovac",
+    "logo": "miljakovac.png",
+    "scale": 1,
+    "stadium_ru": "ФК Миляковац",
+    "stadium_sr": "FK Miljakovac"
+  },
+  {
+    "id": "city_sport",
+    "ru": "Сити Спорт Клуб",
+    "sr": "City Sport Klub",
+    "logo": "city_sport.png",
+    "scale": 1,
+    "stadium_ru": "",
+    "stadium_sr": ""
+  },
+  {
+    "id": "hajduk",
+    "ru": "ФК Хайдук",
+    "sr": "FK Hajduk",
+    "logo": "hajduk.png",
+    "scale": 1,
+    "stadium_ru": "",
+    "stadium_sr": ""
+  },
+  {
+    "id": "palilulac",
+    "ru": "ФК Палилулац",
+    "sr": "FK Palilulac",
+    "logo": "palilulac.png",
+    "scale": 1,
+    "stadium_ru": "",
+    "stadium_sr": ""
+  },
+  {
+    "id": "omladinac_1961",
+    "ru": "ФК Омладинац 1961",
+    "sr": "FK Omladinac 1961",
+    "logo": "omladinac.png",
+    "scale": 1,
+    "stadium_ru": "",
+    "stadium_sr": ""
+  },
+  {
+    "id": "pkb_kovilovo",
+    "ru": "ФК ПКБ Ковилово",
+    "sr": "FK PKB Kovilovo",
+    "logo": "kovilovo.png",
+    "scale": 1,
+    "stadium_ru": "ФК ПКБ Ковилово",
+    "stadium_sr": "FK PKB Kovilovo"
+  },
+  {
+    "id": "resnik",
+    "ru": "ФК Ресник",
+    "sr": "FK Resnik",
+    "logo": "resnik.png",
+    "scale": 1,
+    "stadium_ru": "",
+    "stadium_sr": ""
+  }
+]

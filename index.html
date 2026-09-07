@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Афиша матча — генератор</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app" class="app">
+
+  <aside class="panel">
+    <header class="panel__head">
+      <h1>Афиша матча</h1>
+      <div class="seg seg--wide" id="segType">
+        <button type="button" data-type="next" class="is-on">Анонс</button>
+        <button type="button" data-type="score">Счёт</button>
+      </div>
+    </header>
+
+    <section class="block" id="blockHeadline">
+      <div class="block__title">Заголовок</div>
+      <div class="seg seg--wide" id="segHeadline">
+        <button type="button" data-headline="next" class="is-on">Следующий матч</button>
+        <button type="button" data-headline="friendly">Товарищеский</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block__title">Команды <button type="button" class="link" id="btnSwap" title="Поменять местами">⇄ поменять</button></div>
+      <div class="teams">
+        <div class="team" data-side="L">
+          <label class="lbl">Слева (хозяева)</label>
+          <select class="team__select"></select>
+          <div class="team__custom" hidden>
+            <input type="text" class="team__ru" placeholder="Название по-русски">
+            <input type="text" class="team__sr" placeholder="По-сербски (само)">
+            <label class="file"><input type="file" class="team__logo" accept="image/*"><span>Логотип…</span></label>
+          </div>
+        </div>
+        <div class="team" data-side="R">
+          <label class="lbl">Справа (гости)</label>
+          <select class="team__select"></select>
+          <div class="team__custom" hidden>
+            <input type="text" class="team__ru" placeholder="Название по-русски">
+            <input type="text" class="team__sr" placeholder="По-сербски (само)">
+            <label class="file"><input type="file" class="team__logo" accept="image/*"><span>Логотип…</span></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="blockNext">
+      <div class="block__title">Матч</div>
+      <div class="row">
+        <div class="field">
+          <label class="lbl" for="inDate">Дата</label>
+          <input type="date" id="inDate">
+        </div>
+        <div class="field">
+          <label class="lbl" for="inHour">Время</label>
+          <div class="timepick">
+            <select id="inHour"></select>
+            <span class="colon">:</span>
+            <select id="inMin"></select>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="lbl" for="inStadium">Стадион <span class="hint">(по-русски, без слова «стадион»)</span></label>
+        <input type="text" id="inStadium" list="stadiumList" placeholder="ФК Миляковац" autocomplete="off">
+        <datalist id="stadiumList"></datalist>
+        <div class="srline">
+          <span class="srline__lbl">по-сербски:</span>
+          <span id="stadiumSrText" class="srline__val">—</span>
+          <button type="button" class="link" id="stadiumSrPen" title="Поправить сербское написание">✎</button>
+          <button type="button" class="link" id="stadiumSrAuto" hidden title="Вернуть автоматическое написание">↺ авто</button>
+        </div>
+        <div id="stadiumSrEdit" hidden>
+          <input type="text" id="inStadiumSr" placeholder="FK Miljakovac">
+        </div>
+        <label class="chk"><input type="checkbox" id="inStadiumPrefix" checked> добавлять слово «Стадион» / «Stadion»</label>
+      </div>
+    </section>
+
+    <section class="block" id="blockScore" hidden>
+      <div class="block__title">Счёт</div>
+      <div class="row row--score">
+        <input type="number" id="inScoreL" min="0" max="99" value="0" inputmode="numeric">
+        <span class="colon">:</span>
+        <input type="number" id="inScoreR" min="0" max="99" value="0" inputmode="numeric">
+      </div>
+    </section>
+
+    <section class="block block--export">
+      <button type="button" class="btn btn--primary" id="btnExportAll">Скачать ZIP: RU + SR, 1:1 + 9:16</button>
+      <div class="lbl">Или по одной картинке:</div>
+      <div class="row row--mini">
+        <button type="button" class="btn btn--mini" data-export="ru_1x1">RU 1:1</button>
+        <button type="button" class="btn btn--mini" data-export="ru_9x16">RU 9:16</button>
+        <button type="button" class="btn btn--mini" data-export="sr_1x1">SR 1:1</button>
+        <button type="button" class="btn btn--mini" data-export="sr_9x16">SR 9:16</button>
+      </div>
+      <p class="hint" id="exportStatus"></p>
+    </section>
+
+    <section class="block">
+      <label class="chk chk--big"><input type="checkbox" id="inManual"> Расширенные настройки</label>
+      <div id="manualPanel" class="manual" hidden>
+        <p class="hint">Логотипы выровнены по высоте между собой и с текстом, это не меняется. Сдвинуть можно только влево-вправо: тащите мышью/пальцем на превью или ползунками ниже, для каждого формата отдельно. Название команды едет вместе с логотипом.</p>
+        <div id="manualSliders"></div>
+        <button type="button" class="btn btn--ghost" id="btnResetAdjust">Сбросить сдвиги</button>
+        <label class="chk"><input type="checkbox" id="inSafe"> показать на превью 9:16 зону 4:5 ленты Instagram (в экспорт не попадает)</label>
+      </div>
+    </section>
+
+    <details class="block block--db">
+      <summary>База команд</summary>
+      <div id="dbList" class="db"></div>
+      <div class="db__add">
+        <div class="block__title">Добавить команду</div>
+        <input type="text" id="dbRu" placeholder="Название по-русски (напр. ФК Раковица)">
+        <input type="text" id="dbSr" placeholder="По-сербски (заполнится само, можно поправить)">
+        <input type="text" id="dbStadRu" placeholder="Домашний стадион по-русски (необязательно)">
+        <label class="file"><input type="file" id="dbLogo" accept="image/*"><span id="dbLogoName">Логотип (PNG с прозрачностью)…</span></label>
+        <button type="button" class="btn" id="btnDbAdd">Сохранить в базу</button>
+        <p class="hint">Команды сохраняются в этом браузере.</p>
+      </div>
+    </details>
+
+    <footer class="panel__foot">
+      <span id="engineInfo" class="hint"></span>
+    </footer>
+  </aside>
+
+  <main class="stage">
+    <div class="stage__bar">
+      <span class="stage__lbl">Предпросмотр:</span>
+      <div class="seg" id="segLang">
+        <button type="button" data-lang="ru" class="is-on">RU</button>
+        <button type="button" data-lang="sr">SR</button>
+      </div>
+      <span class="hint">Сербская версия делается сама из русских данных. В ZIP попадают обе.</span>
+    </div>
+    <div class="stage__inner">
+      <figure class="preview preview--1x1">
+        <canvas id="cv1x1" width="1080" height="1080"></canvas>
+        <figcaption>1:1 · 1080×1080</figcaption>
+      </figure>
+      <figure class="preview preview--9x16">
+        <canvas id="cv9x16" width="1080" height="1920"></canvas>
+        <figcaption>9:16 · 1080×1920</figcaption>
+      </figure>
+    </div>
+    <div id="loading" class="loading">Загрузка шрифтов и фонов…</div>
+  </main>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/teams_custom.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

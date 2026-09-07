@@ -1,0 +1,9 @@
+# генерируется build_assets.py (и в GitHub Actions при деплое)
+assets/data.js
+dist/
+# пользовательская база, если появится
+assets/teams_custom.js
+# мусор
+__pycache__/
+Thumbs.db
+.DS_Store
