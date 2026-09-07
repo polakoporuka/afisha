@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "kdf": "PBKDF2-SHA256",
+  "iter": 300000,
+  "salt": "mgdgUWhXXNX4NJ1zQCHioQ==",
+  "iv": "+Cp7FtJxLEemn81T",
+  "ct": "Q7AhK+hvKl2Rri1hdCTsOpCOdDWWgJia43br0olfyY8ZAafGpmtJsHcHhAi56BWHPpbZyxR7nYltdZOAHlxPgyBQKSxuTGx4ty/mOr2X4ttM3Q1PzltFuUyiogNCKrJFqaqmTV2pjeDj4CO5vQ==",
+  "repo": "polakoporuka/afisha"
+}
