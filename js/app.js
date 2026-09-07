@@ -1098,7 +1098,16 @@
     }
   }
 
-  window.AFISHA = { state, LAYOUTS, HEAD, render, renderAll, snapshot, res, TE, translit, GH, syncFromRepo, get TEAMS() { return TEAMS; } };
+  // Хук для бота: рендер одной картинки в base64 PNG (после загрузки шрифтов/фонов)
+  let readyResolve; const readyPromise = new Promise((r) => { readyResolve = r; });
+  async function exportPng(lang, fmt) {
+    await readyPromise;
+    const blob = await renderToBlob(lang, fmt);
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    let bin = ''; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  window.AFISHA = { state, LAYOUTS, HEAD, render, renderAll, snapshot, res, TE, translit, GH, syncFromRepo, exportPng, ready: readyPromise, get TEAMS() { return TEAMS; } };
 
   /* =====================================================================
    *  9. СТАРТ
@@ -1118,6 +1127,7 @@
     if (!state.stadiumRu) autoStadium();
     await renderAll();
     $('#loading').hidden = true;
+    readyResolve(true);
     if (new URLSearchParams(location.search).get('selftest')) {
       try { const d = cv['1x1'].toDataURL('image/png'); document.title = 'EXPORT_OK ' + d.length; }
       catch (e) { document.title = 'EXPORT_FAIL ' + e.message; }
