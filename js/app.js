@@ -405,29 +405,29 @@
   /* =====================================================================
    *  5. СОСТОЯНИЕ И ДАННЫЕ
    * ===================================================================== */
-  const LS_STATE = 'afisha_state_v2', LS_TEAMS = 'afisha_teams_v1', LS_STADIUMS = 'afisha_stadiums_v1';
+  const LS_STATE = 'afisha_state_v2', LS_CACHE = 'afisha_teams_cache_v1', LS_STADIUMS = 'afisha_stadiums_v1', LS_TOKEN = 'afisha_gh_token';
+  const REPO = ASSETS.repo || null;      // {owner, name, branch}
+  const VAULT = ASSETS.vault || null;    // зашифрованный ключ GitHub
+  const SHARED_DB = !!(REPO && VAULT);
 
+  function lsGet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : JSON.parse(v); } catch (e) { return def; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+
+  // Команды: встроенные из data.js (сезонные и добавленные ранее) + кэш добавленных с сайта, ещё не попавших в сборку
   function loadTeams() {
-    const builtin = (ASSETS.teams || []).map((t) => Object.assign({ builtin: true }, t));
-    const extra = (window.AFISHA_TEAMS_CUSTOM || []).map((t) => Object.assign({ builtin: true, file: true }, t));
-    let local = [];
-    try { local = JSON.parse(localStorage.getItem(LS_TEAMS) || '[]'); } catch (e) { local = []; }
     const map = new Map();
-    for (const t of builtin.concat(extra, local)) map.set(t.id, t);
+    for (const t of (ASSETS.teams || [])) map.set(t.id, Object.assign({ builtin: true }, t));
+    for (const t of lsGet(LS_CACHE, [])) if (t && t.id && t.logo) map.set(t.id, Object.assign({}, map.get(t.id) || {}, t, { builtin: false }));
     return [...map.values()];
   }
-  function saveLocalTeams(teams) {
-    try { localStorage.setItem(LS_TEAMS, JSON.stringify(teams.filter((t) => !t.builtin))); }
-    catch (e) { alert('Не удалось сохранить команду (переполнено хранилище браузера). Уменьшите размер логотипа.'); }
-  }
+  function saveCache() { lsSet(LS_CACHE, TEAMS.filter((t) => !t.builtin)); }
 
   let TEAMS = loadTeams();
   const HOME_ID = TEAMS.some((t) => t.id === 'miljakovac') ? 'miljakovac' : (TEAMS[0] ? TEAMS[0].id : '');
 
   /* --- Транслитерация русской записи сербских названий в сербскую латиницу --- */
-  const TR_PAIRS = { 'ль': 'lj', 'нь': 'nj', 'дж': 'dž', 'ль': 'lj' };
+  const TR_PAIRS = { 'ль': 'lj', 'нь': 'nj', 'дж': 'dž' };
   const TR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'ž', з: 'z', и: 'i', й: 'j', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'č', ш: 'š', щ: 'šć', ъ: '', ы: 'i', ь: '', э: 'e', ю: 'ju', я: 'ja',
-    // сербская кириллица, если вдруг ввели её
     ђ: 'đ', ћ: 'ć', љ: 'lj', њ: 'nj', џ: 'dž', ј: 'j' };
   function translit(src) {
     const chars = [...(src || '')]; let out = '';
@@ -441,15 +441,13 @@
       const upper = ch !== low;
       const nextUpper = chars[i + 1] ? chars[i + 1] !== chars[i + 1].toLowerCase() : false;
       const prevUpper = i > 0 ? chars[i - 1] !== chars[i - 1].toLowerCase() : false;
-      // слово капсом → капсом целиком, иначе только первая буква
       out += upper ? ((nextUpper || (prevUpper && !nextUpper && !chars[i + 1])) ? rep.toUpperCase() : rep.charAt(0).toUpperCase() + rep.slice(1)) : rep;
     }
     return out;
   }
 
-  /* --- Память стадионов: по команде хозяев и общий список для подсказок --- */
-  let STADIUMS = { byTeam: {}, list: [] };
-  try { STADIUMS = Object.assign(STADIUMS, JSON.parse(localStorage.getItem(LS_STADIUMS) || '{}')); } catch (e) { /* ignore */ }
+  /* --- Память стадионов на этом устройстве (общая память — в teams.json через GitHub) --- */
+  let STADIUMS = Object.assign({ byTeam: {}, list: [] }, lsGet(LS_STADIUMS, {}));
   function rememberStadium(teamId, ru, sr) {
     ru = (ru || '').trim(); sr = (sr || '').trim();
     if (!ru) return;
@@ -457,12 +455,11 @@
     STADIUMS.list = STADIUMS.list.filter((x) => x.ru !== ru);
     STADIUMS.list.unshift({ ru, sr });
     STADIUMS.list = STADIUMS.list.slice(0, 40);
-    try { localStorage.setItem(LS_STADIUMS, JSON.stringify(STADIUMS)); } catch (e) { /* ignore */ }
+    lsSet(LS_STADIUMS, STADIUMS);
     fillStadiumList();
   }
 
   const emptyAdj = () => ({ L: { dx: 0, dy: 0, s: 1 }, R: { dx: 0, dy: 0, s: 1 } });
-  // по вертикали и по размеру логотипы не двигаются: они выровнены между собой и с текстом
   function sanitizeAdjust(adj) {
     for (const fmt of ['1x1', '9x16']) for (const side of ['L', 'R']) {
       const a = (adj[fmt] = adj[fmt] || emptyAdj())[side] = Object.assign({ dx: 0 }, adj[fmt][side]);
@@ -473,7 +470,7 @@
 
   const state = {
     type: 'next', headline: 'next',
-    lang: 'ru',                       // язык ПРЕДПРОСМОТРА; экспорт всегда делает оба
+    lang: 'ru',
     teamSel: { L: HOME_ID, R: (TEAMS.find((t) => t.id !== HOME_ID) || TEAMS[0] || { id: '' }).id },
     custom: { L: { ru: '', sr: '', logo: '' }, R: { ru: '', sr: '', logo: '' } },
     date: '', time: '17:00',
@@ -482,15 +479,14 @@
     manual: false, adjust: { '1x1': emptyAdj(), '9x16': emptyAdj() },
     showSafe: false,
   };
-  try {
-    const saved = JSON.parse(localStorage.getItem(LS_STATE) || 'null');
+  {
+    const saved = lsGet(LS_STATE, null);
     if (saved) Object.assign(state, saved, { adjust: sanitizeAdjust(Object.assign({ '1x1': emptyAdj(), '9x16': emptyAdj() }, saved.adjust || {})) });
-  } catch (e) { /* ignore */ }
-  // при каждом открытии: обычный заголовок, расширенные настройки выключены
+  }
   state.headline = 'next'; state.manual = false; state.showSafe = false; state.lang = 'ru';
   if (!state.date) { const d = new Date(); state.date = d.toISOString().slice(0, 10); }
   state._autoStadium = state._autoStadium || '';
-  function persist() { try { localStorage.setItem(LS_STATE, JSON.stringify(state)); } catch (e) { /* ignore */ } }
+  function persist() { lsSet(LS_STATE, state); }
 
   function teamFor(side) {
     const id = state.teamSel[side];
@@ -501,6 +497,129 @@
     return TEAMS.find((t) => t.id === id) || TEAMS[0] || { id: '', ru: '', sr: '', logo: '', scale: 1 };
   }
   function stadiumSr() { return state.stadiumSrManual && state.stadiumSr ? state.stadiumSr : translit(state.stadiumRu); }
+
+  /* =====================================================================
+   *  5b. ОБЩАЯ БАЗА: GitHub как хранилище (teams.json + assets/logos)
+   * ===================================================================== */
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
+
+  const GH = {
+    base() { return `https://api.github.com/repos/${REPO.owner}/${REPO.name}`; },
+    token() { return lsGet(LS_TOKEN, ''); },
+    forget() { try { localStorage.removeItem(LS_TOKEN); } catch (e) { /* ignore */ } },
+    async request(method, path, body, token) {
+      const r = await fetch(this.base() + path, {
+        method, headers: Object.assign({ Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, token ? { Authorization: 'Bearer ' + token } : {}, body ? { 'Content-Type': 'application/json' } : {}),
+        body: body ? JSON.stringify(body) : undefined, cache: 'no-store',
+      });
+      let j = null; try { j = await r.json(); } catch (e) { /* пусто */ }
+      if (!r.ok) { const err = new Error((j && j.message) || ('HTTP ' + r.status)); err.status = r.status; throw err; }
+      return j;
+    },
+    async verify(token) {
+      const j = await this.request('GET', '', null, token);
+      return !!(j && j.permissions && j.permissions.push);
+    },
+    async getFile(path, token) {
+      try { return await this.request('GET', `/contents/${path}?ref=${REPO.branch}`, null, token); }
+      catch (e) { if (e.status === 404) return null; throw e; }
+    },
+    async putFile(path, contentB64, message, sha, token) {
+      const body = { message, content: contentB64, branch: REPO.branch };
+      if (sha) body.sha = sha;
+      return this.request('PUT', `/contents/${path}`, body, token);
+    },
+    async deleteFile(path, message, token) {
+      const f = await this.getFile(path, token);
+      if (!f) return null;
+      return this.request('DELETE', `/contents/${path}`, { message, sha: f.sha, branch: REPO.branch }, token);
+    },
+    // читаем teams.json, меняем, пишем; при гонке (кто-то записал раньше) повторяем
+    async updateTeams(mutate, message, token) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const f = await this.getFile('teams.json', token);
+        if (!f) throw new Error('В репозитории нет teams.json');
+        const list = JSON.parse(b64ToUtf8(f.content));
+        const next = mutate(list.slice()) || list;
+        const text = JSON.stringify(next, null, 2) + '\n';
+        try { await this.putFile('teams.json', utf8ToB64(text), message, f.sha, token); return next; }
+        catch (e) { if (e.status !== 409 && e.status !== 422) throw e; }
+      }
+      throw new Error('Не удалось записать teams.json: кто-то менял базу одновременно, попробуйте ещё раз');
+    },
+  };
+  function utf8ToB64(s) { return btoa(String.fromCharCode(...new TextEncoder().encode(s))); }
+  function b64ToUtf8(b) { return new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g, '')), (c) => c.charCodeAt(0))); }
+  function dataUrlToB64(d) { return d.replace(/^data:[^,]*,/, ''); }
+
+  // Общий пароль → ключ (спрашивается один раз на устройстве)
+  let pwResolve = null;
+  function askPassword() {
+    return new Promise((resolve) => {
+      pwResolve = resolve;
+      $('#pwErr').textContent = ''; $('#pwInput').value = '';
+      $('#pwModal').hidden = false; setTimeout(() => $('#pwInput').focus(), 50);
+    });
+  }
+  async function pwSubmit() {
+    const pw = $('#pwInput').value;
+    if (!pw) return;
+    $('#pwErr').textContent = 'Проверяю…';
+    try {
+      const token = await window.AfishaVault.decrypt(VAULT, pw);
+      if (!(await GH.verify(token))) throw new Error('Ключ не даёт права записи');
+      lsSet(LS_TOKEN, token);
+      $('#pwModal').hidden = true;
+      const r = pwResolve; pwResolve = null; if (r) r(token);
+    } catch (e) {
+      $('#pwErr').textContent = (e.name === 'OperationError') ? 'Пароль не подходит.' : 'Ошибка: ' + e.message;
+    }
+  }
+  function pwCancel() { $('#pwModal').hidden = true; const r = pwResolve; pwResolve = null; if (r) r(null); }
+  async function ensureToken() {
+    if (!SHARED_DB) return null;
+    const t = GH.token();
+    if (t) return t;
+    return askPassword();
+  }
+
+  // Подтянуть свежий teams.json из репозитория (без ключа): чтобы команды, добавленные другими, появились сразу
+  async function syncFromRepo() {
+    if (!REPO || !navigator.onLine) return;
+    try {
+      const raw = `https://raw.githubusercontent.com/${REPO.owner}/${REPO.name}/${REPO.branch}/`;
+      const r = await fetch(raw + 'teams.json', { cache: 'no-store' });
+      if (!r.ok) return;
+      const list = await r.json();
+      const ids = new Set(list.map((t) => t.id));
+      let changed = false;
+      for (const t of list) {
+        const cur = TEAMS.find((x) => x.id === t.id);
+        if (cur && cur.logoFile === t.logo) {
+          // только тексты
+          for (const k of ['ru', 'sr', 'stadium_ru', 'stadium_sr']) if ((cur[k] || '') !== (t[k] || '')) { cur[k] = t[k] || ''; changed = true; }
+          if (!!cur.season !== !!t.season) { cur.season = !!t.season; changed = true; }
+        }
+      }
+      // новые команды или новые логотипы → скачиваем PNG и превращаем в data URL (для canvas)
+      for (const t of list) {
+        const cur = TEAMS.find((x) => x.id === t.id);
+        if (cur && cur.logoFile === t.logo) continue;
+        const lr = await fetch(raw + 'assets/logos/' + t.logo, { cache: 'no-store' });
+        if (!lr.ok) continue;
+        const blob = await lr.blob();
+        const dataUrl = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+        const entry = { id: t.id, ru: t.ru || '', sr: t.sr || '', logo: dataUrl, logoFile: t.logo, scale: 1, season: !!t.season, stadium_ru: t.stadium_ru || '', stadium_sr: t.stadium_sr || '', builtin: false };
+        if (cur) Object.assign(cur, entry); else TEAMS.push(entry);
+        changed = true;
+      }
+      const before = TEAMS.length;
+      TEAMS = TEAMS.filter((t) => ids.has(t.id));
+      if (TEAMS.length !== before) changed = true;
+      if (changed) { saveCache(); renderDb(); fillTeamSelects(); scheduleRender(); }
+    } catch (e) { console.warn('sync', e); }
+  }
 
   /* =====================================================================
    *  6. РЕСУРСЫ (шрифты, фоны, логотипы)
@@ -543,7 +662,6 @@
     res.logos.L = await loadImage(teamFor('L').logo);
     res.logos.R = await loadImage(teamFor('R').logo);
   }
-  // снимок состояния для рендера; lang можно переопределить (для экспорта обоих языков)
   function snapshot(lang) {
     return Object.assign({}, state, { lang: lang || state.lang, stadiumSr: stadiumSr(), teams: { L: teamFor('L'), R: teamFor('R') } });
   }
@@ -561,7 +679,6 @@
     persist();
   }
 
-  // Зона 4:5 (1080×1350), которую показывает лента Instagram у вертикального поста, и 1:1 — только в превью
   function drawSafeZone(ctx, L) {
     ctx.save();
     ctx.fillStyle = 'rgba(255,0,0,0.28)';
@@ -624,13 +741,25 @@
         }
         statusEl.textContent = 'Готово: ' + files.map((f) => f.name).join(', ');
       }
-      if (state.type === 'next') rememberStadium(state.teamSel.L, state.stadiumRu, stadiumSr());
+      if (state.type === 'next') { rememberStadium(state.teamSel.L, state.stadiumRu, stadiumSr()); shareStadium(); }
     } catch (e) {
       console.error(e); statusEl.textContent = 'Ошибка: ' + e.message;
     }
     exporting = false;
   }
   const ALL_ITEMS = [['ru', '1x1'], ['ru', '9x16'], ['sr', '1x1'], ['sr', '9x16']];
+
+  // Стадион хозяев уходит в общую базу, если изменился (тихо, только если пароль уже введён на устройстве)
+  async function shareStadium() {
+    const t = teamFor('L');
+    const ru = state.stadiumRu.trim(), sr = stadiumSr().trim();
+    if (!SHARED_DB || !GH.token() || t.id === '__custom' || !ru) return;
+    if ((t.stadium_ru || '') === ru && (t.stadium_sr || '') === sr) return;
+    try {
+      await GH.updateTeams((list) => { const e = list.find((x) => x.id === t.id); if (e) { e.stadium_ru = ru; e.stadium_sr = sr; } return list; }, `Стадион: ${t.sr || t.ru} → ${ru}`, GH.token());
+      t.stadium_ru = ru; t.stadium_sr = sr; if (!t.builtin) saveCache();
+    } catch (e) { console.warn('stadium share', e); }
+  }
 
   /* --- минимальный ZIP (без сжатия) --- */
   const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; } return t; })();
@@ -657,17 +786,19 @@
   /* =====================================================================
    *  8. UI
    * ===================================================================== */
-  const $ = (s, r) => (r || document).querySelector(s);
-  const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
-
   function fillTeamSelects() {
     for (const side of ['L', 'R']) {
       const sel = $(`.team[data-side="${side}"] .team__select`);
       sel.innerHTML = '';
-      for (const t of TEAMS) {
-        const o = document.createElement('option'); o.value = t.id; o.textContent = t.ru || t.sr; sel.appendChild(o);
-      }
-      const oc = document.createElement('option'); oc.value = '__custom'; oc.textContent = '— своя команда (разово) —'; sel.appendChild(oc);
+      const season = TEAMS.filter((t) => t.season), other = TEAMS.filter((t) => !t.season);
+      const addGroup = (label, list) => {
+        if (!list.length) return;
+        const g = document.createElement('optgroup'); g.label = label;
+        for (const t of list) { const o = document.createElement('option'); o.value = t.id; o.textContent = t.ru || t.sr; g.appendChild(o); }
+        sel.appendChild(g);
+      };
+      addGroup('Сезон', season); addGroup('Другие', other);
+      const oc = document.createElement('option'); oc.value = '__custom'; oc.textContent = '— своя команда (разово, без сохранения) —'; sel.appendChild(oc);
       if (![...sel.options].some((o) => o.value === state.teamSel[side])) state.teamSel[side] = TEAMS[0] ? TEAMS[0].id : '__custom';
       sel.value = state.teamSel[side];
       $(`.team[data-side="${side}"] .team__custom`).hidden = state.teamSel[side] !== '__custom';
@@ -688,7 +819,9 @@
   }
   function fillStadiumList() {
     const dl = $('#stadiumList'); dl.innerHTML = '';
-    for (const s of STADIUMS.list) { const o = document.createElement('option'); o.value = s.ru; dl.appendChild(o); }
+    const seen = new Set();
+    for (const s of STADIUMS.list) { seen.add(s.ru); const o = document.createElement('option'); o.value = s.ru; dl.appendChild(o); }
+    for (const t of TEAMS) if (t.stadium_ru && !seen.has(t.stadium_ru)) { seen.add(t.stadium_ru); const o = document.createElement('option'); o.value = t.stadium_ru; dl.appendChild(o); }
   }
   function syncStadiumSr() {
     const sr = stadiumSr();
@@ -718,12 +851,12 @@
     fillTeamSelects();
   }
 
-  // Стадион хозяев: из памяти, иначе из базы. Подменяем только если поле пустое или было автозаполнено
+  // Стадион хозяев: из общей базы (teams.json) или из памяти устройства
   function autoStadium() {
     const t = teamFor('L');
     const mem = STADIUMS.byTeam[t.id];
-    const ru = mem ? mem.ru : (t.stadium_ru || '');
-    const sr = mem ? mem.sr : (t.stadium_sr || '');
+    const ru = t.stadium_ru || (mem ? mem.ru : '');
+    const sr = t.stadium_sr || (mem ? mem.sr : '');
     if (!state.stadiumRu || state.stadiumRu === state._autoStadium) {
       state.stadiumRu = ru; state._autoStadium = ru;
       if (sr && sr !== translit(ru)) { state.stadiumSr = sr; state.stadiumSrManual = true; } else { state.stadiumSrManual = false; state.stadiumSr = ''; }
@@ -731,12 +864,10 @@
     }
   }
 
-  // Переключатели
   $('#segType').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.type = b.dataset.type; syncUI(); scheduleRender(); });
   $('#segHeadline').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.headline = b.dataset.headline; syncUI(); scheduleRender(); });
   $('#segLang').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.lang = b.dataset.lang; syncUI(); scheduleRender(); });
 
-  // Команды
   for (const side of ['L', 'R']) {
     const root = $(`.team[data-side="${side}"]`);
     $('.team__select', root).addEventListener('change', (e) => {
@@ -762,7 +893,6 @@
     autoStadium(); syncUI(); scheduleRender();
   });
 
-  // Матч
   $('#inDate').addEventListener('change', (e) => { state.date = e.target.value; scheduleRender(); });
   const onTime = () => { state.time = $('#inHour').value + ':' + $('#inMin').value; scheduleRender(); };
   $('#inHour').addEventListener('change', onTime); $('#inMin').addEventListener('change', onTime);
@@ -775,7 +905,6 @@
   $('#inScoreL').addEventListener('input', (e) => { state.scoreL = Math.max(0, parseInt(e.target.value, 10) || 0); scheduleRender(); });
   $('#inScoreR').addEventListener('input', (e) => { state.scoreR = Math.max(0, parseInt(e.target.value, 10) || 0); scheduleRender(); });
 
-  // Расширенные настройки
   $('#inManual').addEventListener('change', (e) => { state.manual = e.target.checked; syncUI(); scheduleRender(); });
   $('#inSafe').addEventListener('change', (e) => { state.showSafe = e.target.checked; scheduleRender(); });
   $('#btnResetAdjust').addEventListener('click', () => { state.adjust = { '1x1': emptyAdj(), '9x16': emptyAdj() }; buildSliders(); scheduleRender(); });
@@ -794,7 +923,6 @@
     }
   }
 
-  // Перетаскивание логотипов на превью (только по горизонтали)
   for (const fmt of ['1x1', '9x16']) {
     const c = cv[fmt]; let drag = null;
     const toCanvas = (e) => { const r = c.getBoundingClientRect(); return { x: (e.clientX - r.left) * c.width / r.width, y: (e.clientY - r.top) * c.height / r.height }; };
@@ -820,11 +948,10 @@
     c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
   }
 
-  // Экспорт
   $('#btnExportAll').addEventListener('click', () => exportItems(ALL_ITEMS, true));
   $$('[data-export]').forEach((b) => b.addEventListener('click', () => { const [lang, fmt] = b.dataset.export.split('_'); exportItems([[lang, fmt]], false); }));
 
-  // База команд
+  /* --- База команд: добавление, правка и удаление несезонных команд в общей базе --- */
   function fileToDataUrl(file, maxSide) {
     return new Promise((resolve) => {
       const fr = new FileReader();
@@ -843,40 +970,113 @@
       fr.readAsDataURL(file);
     });
   }
-  let dbLogoData = '';
+  let dbLogoData = '', dbEditing = null;
+  const dbStatus = (msg, cls) => { const el = $('#dbStatus'); el.textContent = msg; el.className = 'hint ' + (cls || ''); };
   $('#dbLogo').addEventListener('change', async (e) => {
     const f = e.target.files[0]; if (!f) return;
-    dbLogoData = await fileToDataUrl(f, 900);
+    dbLogoData = await fileToDataUrl(f, 700);
     $('#dbLogoName').textContent = f.name; e.target.parentElement.classList.add('is-set');
   });
   $('#dbRu').addEventListener('input', (e) => { const sr = $('#dbSr'); if (!sr.dataset.touched) sr.value = translit(e.target.value); });
   $('#dbSr').addEventListener('input', (e) => { e.target.dataset.touched = e.target.value ? '1' : ''; });
-  $('#btnDbAdd').addEventListener('click', () => {
-    const ru = $('#dbRu').value.trim(), sr = $('#dbSr').value.trim() || translit(ru);
-    if (!ru && !sr) { alert('Введите название команды'); return; }
-    if (!dbLogoData) { alert('Выберите логотип'); return; }
-    const id = slug(sr || ru) + '_' + Date.now().toString(36);
-    const stRu = $('#dbStadRu').value.trim();
-    TEAMS.push({ id, ru: ru || sr, sr: sr || ru, logo: dbLogoData, scale: 1, stadium_ru: stRu, stadium_sr: translit(stRu) });
-    saveLocalTeams(TEAMS);
+  function dbFormReset() {
+    dbEditing = null; dbLogoData = '';
     $('#dbRu').value = ''; $('#dbSr').value = ''; $('#dbSr').dataset.touched = ''; $('#dbStadRu').value = '';
-    dbLogoData = ''; $('#dbLogoName').textContent = 'Логотип (PNG с прозрачностью)…'; $('#dbLogo').parentElement.classList.remove('is-set');
-    state.teamSel.R = id;
-    renderDb(); syncUI(); scheduleRender();
-  });
-  function renderDb() {
-    const host = $('#dbList'); host.innerHTML = '';
-    for (const t of TEAMS) {
-      const el = document.createElement('div'); el.className = 'db__item';
-      el.innerHTML = `<img alt=""><div><b></b><small></small></div>${t.builtin ? '<span class="hint">' + (t.file ? 'файл' : 'встроенная') + '</span>' : '<button type="button">удалить</button>'}`;
-      el.querySelector('img').src = t.logo; el.querySelector('b').textContent = t.ru; el.querySelector('small').textContent = t.sr;
-      const del = el.querySelector('button');
-      if (del) del.addEventListener('click', () => { if (!confirm('Удалить «' + t.ru + '»?')) return; TEAMS = TEAMS.filter((x) => x !== t); saveLocalTeams(TEAMS); renderDb(); syncUI(); scheduleRender(); });
-      host.appendChild(el);
+    $('#dbLogoName').textContent = 'Логотип (PNG с прозрачностью)…'; $('#dbLogo').parentElement.classList.remove('is-set'); $('#dbLogo').value = '';
+    $('#dbFormTitle').textContent = 'Добавить команду'; $('#btnDbAdd').textContent = 'Сохранить в общую базу'; $('#btnDbCancel').hidden = true;
+  }
+  function dbFormEdit(t) {
+    dbEditing = t; dbLogoData = '';
+    $('#dbRu').value = t.ru; $('#dbSr').value = t.sr; $('#dbSr').dataset.touched = '1'; $('#dbStadRu').value = t.stadium_ru || '';
+    $('#dbLogoName').textContent = 'Оставить логотип как есть (или выберите новый)'; $('#dbLogo').parentElement.classList.remove('is-set');
+    $('#dbFormTitle').textContent = 'Изменить: ' + t.ru; $('#btnDbAdd').textContent = 'Сохранить изменения'; $('#btnDbCancel').hidden = false;
+    $('#dbRu').focus();
+  }
+  $('#btnDbCancel').addEventListener('click', () => { dbFormReset(); dbStatus(''); });
+
+  $('#btnDbAdd').addEventListener('click', async () => {
+    const ru = $('#dbRu').value.trim(), sr = $('#dbSr').value.trim() || translit(ru);
+    const stRu = $('#dbStadRu').value.trim(), stSr = stRu ? translit(stRu) : '';
+    if (!ru) { dbStatus('Введите название команды', 'err'); return; }
+    if (!dbEditing && !dbLogoData) { dbStatus('Выберите логотип', 'err'); return; }
+    if (!SHARED_DB) { dbStatus('Общая база не настроена (нет assets/vault.json)', 'err'); return; }
+    const token = await ensureToken();
+    if (!token) { dbStatus('Без пароля сохранить в общую базу нельзя', 'err'); return; }
+    $('#btnDbAdd').disabled = true;
+    try {
+      if (dbEditing) {
+        const t = dbEditing;
+        dbStatus('Сохраняю изменения в общую базу…');
+        if (dbLogoData) {
+          const f = await GH.getFile('assets/logos/' + t.logoFile, token);
+          await GH.putFile('assets/logos/' + t.logoFile, dataUrlToB64(dbLogoData), `Логотип: ${sr}`, f ? f.sha : null, token);
+        }
+        await GH.updateTeams((list) => { const e = list.find((x) => x.id === t.id); if (e) Object.assign(e, { ru, sr, stadium_ru: stRu, stadium_sr: stSr }); return list; }, `Команда: ${sr} (изменение)`, token);
+        Object.assign(t, { ru, sr, stadium_ru: stRu, stadium_sr: stSr }); if (dbLogoData) t.logo = dbLogoData;
+        if (!t.builtin) saveCache();
+        dbStatus('Сохранено. У остальных появится через минуту-две.', 'ok');
+      } else {
+        const id = slug(sr) + '_' + Date.now().toString(36).slice(-4);
+        const logoFile = id + '.png';
+        dbStatus('Загружаю логотип в общую базу…');
+        await GH.putFile('assets/logos/' + logoFile, dataUrlToB64(dbLogoData), `Логотип: ${sr}`, null, token);
+        dbStatus('Записываю команду…');
+        await GH.updateTeams((list) => { list.push({ id, ru, sr, logo: logoFile, season: false, stadium_ru: stRu, stadium_sr: stSr }); return list; }, `Команда: ${sr} (добавлена с сайта)`, token);
+        TEAMS.push({ id, ru, sr, logo: dbLogoData, logoFile, scale: 1, season: false, stadium_ru: stRu, stadium_sr: stSr, builtin: false });
+        saveCache();
+        state.teamSel.R = id;
+        dbStatus('Команда сохранена в общую базу. У остальных появится через минуту-две.', 'ok');
+      }
+      dbFormReset(); renderDb(); syncUI(); scheduleRender();
+    } catch (e) {
+      console.error(e);
+      if (e.status === 401) { GH.forget(); dbStatus('Ключ не принят GitHub (устарел?). Введите пароль ещё раз.', 'err'); }
+      else dbStatus('Ошибка: ' + e.message, 'err');
     }
+    $('#btnDbAdd').disabled = false;
+  });
+
+  async function dbDelete(t) {
+    if (!confirm('Удалить «' + t.ru + '» из общей базы?')) return;
+    const token = await ensureToken();
+    if (!token) { dbStatus('Без пароля удалить нельзя', 'err'); return; }
+    try {
+      dbStatus('Удаляю…');
+      await GH.updateTeams((list) => list.filter((x) => x.id !== t.id), `Команда: ${t.sr || t.ru} (удалена с сайта)`, token);
+      await GH.deleteFile('assets/logos/' + t.logoFile, `Логотип удалён: ${t.sr || t.ru}`, token);
+      TEAMS = TEAMS.filter((x) => x !== t); saveCache();
+      if (state.teamSel.L === t.id) state.teamSel.L = HOME_ID;
+      if (state.teamSel.R === t.id) state.teamSel.R = (TEAMS.find((x) => x.id !== state.teamSel.L) || { id: '' }).id;
+      dbStatus('Удалено.', 'ok');
+      if (dbEditing === t) dbFormReset();
+      renderDb(); syncUI(); scheduleRender();
+    } catch (e) { console.error(e); dbStatus('Ошибка: ' + e.message, 'err'); }
   }
 
-  // Параметры URL: ?type=next|score&headline=next|friendly&lang=ru|sr&L=<id>&R=<id>&date=YYYY-MM-DD&time=HH:MM&stadium=...&stadiumSr=...&score=7:0&qa=1x1|9x16
+  function renderDb() {
+    const host = $('#dbList'); host.innerHTML = '';
+    const sorted = TEAMS.slice().sort((a, b) => (b.season ? 1 : 0) - (a.season ? 1 : 0));
+    for (const t of sorted) {
+      const el = document.createElement('div'); el.className = 'db__item';
+      el.innerHTML = `<img alt=""><div><b></b><small></small></div><div class="db__act"></div>`;
+      el.querySelector('img').src = t.logo; el.querySelector('b').textContent = t.ru;
+      el.querySelector('small').textContent = t.sr + (t.stadium_ru ? ' · ' + t.stadium_ru : '');
+      const act = el.querySelector('.db__act');
+      if (t.season) act.innerHTML = '<span class="hint" title="Сезонная команда: менять нельзя">🔒 сезон</span>';
+      else {
+        const ed = document.createElement('button'); ed.type = 'button'; ed.textContent = 'изменить'; ed.addEventListener('click', () => dbFormEdit(t));
+        const del = document.createElement('button'); del.type = 'button'; del.className = 'danger'; del.textContent = 'удалить'; del.addEventListener('click', () => dbDelete(t));
+        act.appendChild(ed); act.appendChild(del);
+      }
+      host.appendChild(el);
+    }
+    $('#dbSyncInfo').textContent = SHARED_DB ? 'Общая база на GitHub. Сезонные команды заблокированы, остальные можно менять и удалять.' : 'Общая база не настроена: нет assets/vault.json. Добавлять команды можно только через teams.json.';
+  }
+  $('#pwOk').addEventListener('click', pwSubmit);
+  $('#pwInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') pwSubmit(); if (e.key === 'Escape') pwCancel(); });
+  $('#pwCancel').addEventListener('click', pwCancel);
+  $('#btnForget').addEventListener('click', () => { GH.forget(); dbStatus('Пароль забыт, при следующем сохранении спросим снова.', 'ok'); });
+
   function applyQuery() {
     const q = new URLSearchParams(location.search);
     if (!q.size) return;
@@ -898,7 +1098,7 @@
     }
   }
 
-  window.AFISHA = { state, LAYOUTS, HEAD, render, renderAll, snapshot, res, TE, translit };
+  window.AFISHA = { state, LAYOUTS, HEAD, render, renderAll, snapshot, res, TE, translit, GH, syncFromRepo, get TEAMS() { return TEAMS; } };
 
   /* =====================================================================
    *  9. СТАРТ
@@ -922,5 +1122,6 @@
       try { const d = cv['1x1'].toDataURL('image/png'); document.title = 'EXPORT_OK ' + d.length; }
       catch (e) { document.title = 'EXPORT_FAIL ' + e.message; }
     }
+    syncFromRepo();
   })();
 })();

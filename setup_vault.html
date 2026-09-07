@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Настройка общей базы — ключ и пароль</title>
+<style>
+  body { background: #141414; color: #f0f0f0; font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 24px; }
+  .box { max-width: 640px; margin: 0 auto; background: #1d1d1d; border-radius: 12px; padding: 22px 24px; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p, li { color: #bbb; }
+  label { display: block; font-size: 13px; color: #9a9a9a; margin: 14px 0 4px; }
+  input { width: 100%; box-sizing: border-box; background: #262626; color: #f0f0f0; border: 1px solid #333; border-radius: 8px; padding: 9px 10px; font: inherit; }
+  button { background: #0b7246; color: #fff; border: 0; border-radius: 8px; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; margin-top: 16px; }
+  button.ghost { background: #262626; }
+  .ok { color: #4ad48a; } .err { color: #e06767; }
+  code { background: #262626; padding: 1px 5px; border-radius: 4px; }
+  ol { padding-left: 20px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Общая база команд: ключ GitHub и общий пароль</h1>
+  <p>Эта страница работает только у вас в браузере: ключ и пароль никуда не отправляются, кроме одной проверки
+    ключа на api.github.com. На выходе получится файл <code>vault.json</code> с зашифрованным ключом. Его нужно
+    положить в папку <code>assets/</code> и отправить в репозиторий.</p>
+
+  <ol>
+    <li>Создайте ключ: GitHub → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token.</li>
+    <li>Repository access: <b>Only select repositories</b> → выбрать <code>afisha</code>.</li>
+    <li>Permissions → Repository permissions → <b>Contents: Read and write</b>. Больше ничего.</li>
+    <li>Expiration: максимум (год). Скопируйте ключ, он начинается с <code>github_pat_</code>.</li>
+  </ol>
+
+  <label for="token">Ключ GitHub (github_pat_…)</label>
+  <input id="token" type="password" autocomplete="off" spellcheck="false">
+  <label for="repo">Репозиторий (owner/name)</label>
+  <input id="repo" type="text" value="polakoporuka/afisha">
+  <label for="pass">Общий пароль для людей (фраза из нескольких слов)</label>
+  <input id="pass" type="text" autocomplete="off">
+  <label for="pass2">Ещё раз</label>
+  <input id="pass2" type="text" autocomplete="off">
+
+  <button id="go">Проверить ключ и сделать vault.json</button>
+  <button id="dl" class="ghost" hidden>Скачать vault.json</button>
+  <p id="out"></p>
+</div>
+<script src="js/vault.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  let blob = null;
+  $('#go').addEventListener('click', async () => {
+    const out = $('#out'); out.className = ''; out.textContent = 'Проверяю…';
+    const token = $('#token').value.trim(), repo = $('#repo').value.trim(), p1 = $('#pass').value, p2 = $('#pass2').value;
+    if (!token.startsWith('github_pat_') && !token.startsWith('ghp_')) { out.className = 'err'; out.textContent = 'Это не похоже на ключ GitHub.'; return; }
+    if (p1.length < 8) { out.className = 'err'; out.textContent = 'Пароль слишком короткий, нужно хотя бы 8 символов.'; return; }
+    if (p1 !== p2) { out.className = 'err'; out.textContent = 'Пароли не совпадают.'; return; }
+    try {
+      const r = await fetch('https://api.github.com/repos/' + repo, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' } });
+      if (!r.ok) { out.className = 'err'; out.textContent = 'GitHub не принял ключ: ' + r.status + ' ' + (await r.text()).slice(0, 200); return; }
+      const j = await r.json();
+      if (!j.permissions || !j.permissions.push) { out.className = 'err'; out.textContent = 'Ключ подходит для чтения, но не даёт права записи (Contents: Read and write).'; return; }
+      const vault = await AfishaVault.encrypt(token, p1);
+      vault.repo = repo;
+      blob = new Blob([JSON.stringify(vault, null, 2)], { type: 'application/json' });
+      out.className = 'ok'; out.textContent = 'Ключ проверен, права записи есть. Скачайте vault.json и положите его в папку assets/.';
+      $('#dl').hidden = false;
+    } catch (e) { out.className = 'err'; out.textContent = 'Ошибка: ' + e.message; }
+  });
+  $('#dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'vault.json'; document.body.appendChild(a); a.click(); a.remove();
+  });
+</script>
+</body>
+</html>

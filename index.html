@@ -116,15 +116,20 @@
 
     <details class="block block--db">
       <summary>База команд</summary>
+      <p class="hint" id="dbSyncInfo"></p>
       <div id="dbList" class="db"></div>
       <div class="db__add">
-        <div class="block__title">Добавить команду</div>
+        <div class="block__title" id="dbFormTitle">Добавить команду</div>
         <input type="text" id="dbRu" placeholder="Название по-русски (напр. ФК Раковица)">
         <input type="text" id="dbSr" placeholder="По-сербски (заполнится само, можно поправить)">
         <input type="text" id="dbStadRu" placeholder="Домашний стадион по-русски (необязательно)">
         <label class="file"><input type="file" id="dbLogo" accept="image/*"><span id="dbLogoName">Логотип (PNG с прозрачностью)…</span></label>
-        <button type="button" class="btn" id="btnDbAdd">Сохранить в базу</button>
-        <p class="hint">Команды сохраняются в этом браузере.</p>
+        <div class="row">
+          <button type="button" class="btn" id="btnDbAdd">Сохранить в общую базу</button>
+          <button type="button" class="btn btn--ghost" id="btnDbCancel" hidden>Отмена</button>
+        </div>
+        <p class="hint" id="dbStatus"></p>
+        <p class="hint">Команды сохраняются в общую базу и через минуту-две появляются у всех. Для записи нужен общий пароль, он спрашивается один раз на устройстве. <button type="button" class="link" id="btnForget">Забыть пароль на этом устройстве</button></p>
       </div>
     </details>
 
@@ -156,6 +161,20 @@
   </main>
 </div>
 
+<div id="pwModal" class="modal" hidden>
+  <div class="modal__box">
+    <h2>Общий пароль</h2>
+    <p class="hint">Чтобы сохранять команды в общую базу, введите общий пароль команды. На этом устройстве он спрашивается один раз.</p>
+    <input type="password" id="pwInput" autocomplete="current-password" placeholder="пароль">
+    <p class="hint err" id="pwErr"></p>
+    <div class="row">
+      <button type="button" class="btn btn--primary" id="pwOk">Войти</button>
+      <button type="button" class="btn" id="pwCancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/vault.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/teams_custom.js"></script>
 <script src="js/app.js"></script>

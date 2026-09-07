@@ -68,12 +68,27 @@ def build_data_js():
             "ru": t.get("ru", ""),
             "sr": t.get("sr", ""),
             "logo": data_url(logo_path),
-            "scale": float(t.get("scale", 1)),
+            "logoFile": t["logo"],
+            "scale": 1,
+            "season": bool(t.get("season", False)),
             "stadium_ru": t.get("stadium_ru", ""),
             "stadium_sr": t.get("stadium_sr", ""),
         })
 
     payload = {"fonts": fonts, "bgs": bgs, "teams": out_teams}
+    # общая база: адрес репозитория и зашифрованный ключ (если настроен)
+    cfg_path = os.path.join(HERE, "config.json")
+    if os.path.exists(cfg_path):
+        with open(cfg_path, encoding="utf-8") as f:
+            cfg = json.load(f)
+        payload["repo"] = {"owner": cfg["owner"], "name": cfg["repo"], "branch": cfg.get("branch", "main")}
+    vault_path = os.path.join(ASSETS, "vault.json")
+    if os.path.exists(vault_path):
+        with open(vault_path, encoding="utf-8") as f:
+            payload["vault"] = json.load(f)
+        print("vault.json найден: общая база включена")
+    else:
+        print("vault.json нет: общая база выключена (см. setup_vault.html)")
     js = "// Сгенерировано build_assets.py — не редактировать руками.\nwindow.AFISHA_ASSETS = " + json.dumps(payload, ensure_ascii=False) + ";\n"
     out = os.path.join(ASSETS, "data.js")
     with open(out, "w", encoding="utf-8") as f:
