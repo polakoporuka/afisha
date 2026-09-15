@@ -28,6 +28,11 @@
       ru: { g: { text: 'ТОВАРИЩЕСКИЙ', size: 220, base: 495, maxW: 1000 }, w: { text: 'МАТЧ', size: 221, base: 633, track: 0.05 } },
       sr: { g: { text: 'PRIJATELJSKA', size: 220, base: 495, maxW: 945 }, w: { text: 'UTAKMICA', size: 161, base: 624, track: -0.05 } },
     },
+    // Кубок Белграда (официально «Kup FSS na teritoriji FSB» на сайте ФСБ; на афише — одинаково по смыслу на обоих языках)
+    cup: {
+      ru: { g: { text: 'КУБОК', size: 220, base: 495 }, w: { text: 'БЕЛГРАДА', size: 175, base: 633, track: 0.02, maxW: 1000 } },
+      sr: { g: { text: 'KUP', size: 220, base: 495 }, w: { text: 'BEOGRADA', size: 175, base: 633, track: 0.02, maxW: 1000 } },
+    },
     score: {
       ru: { g: { text: 'РЕЗУЛЬТАТ', size: 209, base: 528 }, w: { text: 'МАТЧА', size: 173, base: 633, track: -0.05 } },
       sr: { g: { text: 'REZULTAT',  size: 225, base: 535 }, w: { text: 'UTAKMICE', size: 161, base: 624, track: -0.05 } },
@@ -336,7 +341,7 @@
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
 
     const lang = st.lang;
-    const H = (st.type === 'next' ? HEAD[st.headline === 'friendly' ? 'friendly' : 'next'] : HEAD.score)[lang];
+    const H = (st.type === 'next' ? (HEAD[st.headline] || HEAD.next) : HEAD.score)[lang];
     // заголовок
     let g = { size: H.g.size, base: H.g.base }, w = { size: H.w.size, base: H.w.base };
     if (L.head) { g = L.head[lang].g; w = L.head[lang].w; }
@@ -347,7 +352,8 @@
     const cx = L.w / 2;
     const gSize = fitSize(ctx, H.g.text, g.size, 'Kino', -0.05, (H.g.maxW || 1000) * (L.headScale || 1), g.size * 0.5);
     outlineCentered(ctx, H.g.text, cx, g.base, { size: gSize, family: 'Kino', track: -0.05, stroke: L.strokeG, color: C.green, rot: ROT_G });
-    fillCentered(ctx, H.w.text, cx, w.base, { size: w.size, family: 'Kino', track: H.w.track, color: C.white, rot: ROT_W });
+    const wSize = H.w.maxW ? fitSize(ctx, H.w.text, w.size, 'Kino', H.w.track, H.w.maxW * (L.headScale || 1), w.size * 0.5) : w.size;
+    fillCentered(ctx, H.w.text, cx, w.base, { size: wSize, family: 'Kino', track: H.w.track, color: C.white, rot: ROT_W });
 
     // логотипы
     for (const side of ['L', 'R']) {
@@ -699,7 +705,7 @@
     const map = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'j', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya', ć: 'c', č: 'c', š: 's', ž: 'z', đ: 'dj' };
     return (s || '').toLowerCase().split('').map((ch) => (map[ch] !== undefined ? map[ch] : ch)).join('').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'team';
   }
-  function kindName() { return state.type === 'next' && state.headline === 'friendly' ? 'friendly' : state.type; }
+  function kindName() { return state.type === 'next' && state.headline && state.headline !== 'next' ? state.headline : state.type; }
   function baseName() {
     const L = teamFor('L'), R = teamFor('R');
     return `${kindName()}_${slug(L.sr || L.ru)}-${slug(R.sr || R.ru)}`;
