@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "title": "Iron Hearts Bois — клубы",
+  "items": [
+    {
+      "id": "iron_hearts_bois",
+      "name": "Iron Hearts Bois",
+      "file": "iron_hearts_bois.png",
+      "emoji": "💚",
+      "keywords": [
+        "ihb",
+        "bois",
+        "бойс"
+      ]
+    },
+    {
+      "id": "miljakovac",
+      "name": "FK Miljakovac",
+      "file": "miljakovac.png",
+      "emoji": "⚽",
+      "keywords": [
+        "miljakovac",
+        "миляковац"
+      ]
+    },
+    {
+      "id": "city_sport",
+      "name": "City Sport Klub",
+      "file": "city_sport.png",
+      "emoji": "⚽",
+      "keywords": [
+        "city sport",
+        "сити"
+      ]
+    },
+    {
+      "id": "hajduk",
+      "name": "FK Hajduk",
+      "file": "hajduk.png",
+      "emoji": "⚽",
+      "keywords": [
+        "hajduk",
+        "хайдук"
+      ]
+    },
+    {
+      "id": "palilulac",
+      "name": "FK Palilulac",
+      "file": "palilulac.png",
+      "emoji": "⚽",
+      "keywords": [
+        "palilulac",
+        "палилулац"
+      ]
+    },
+    {
+      "id": "omladinac_1961",
+      "name": "FK Omladinac 1961",
+      "file": "omladinac_1961.png",
+      "emoji": "⚽",
+      "keywords": [
+        "omladinac",
+        "омладинац"
+      ]
+    },
+    {
+      "id": "pkb_kovilovo",
+      "name": "FK PKB Kovilovo",
+      "file": "pkb_kovilovo.png",
+      "emoji": "⚽",
+      "keywords": [
+        "kovilovo",
+        "ковилово"
+      ]
+    },
+    {
+      "id": "resnik",
+      "name": "FK Resnik",
+      "file": "resnik.png",
+      "emoji": "⚽",
+      "keywords": [
+        "resnik",
+        "ресник"
+      ]
+    },
+    {
+      "id": "ufk_studentski_grad_pu3r",
+      "name": "UFK Studentski Grad",
+      "file": "ufk_studentski_grad_pu3r.png",
+      "emoji": "⚽",
+      "keywords": [
+        "studentski grad",
+        "студентски"
+      ]
+    }
+  ]
+}
