@@ -61,5 +61,14 @@
     "stadium_ru": "",
     "stadium_sr": "",
     "season": true
+  },
+  {
+    "id": "ufk_studentski_grad_pu3r",
+    "ru": "УФК Студентски Град",
+    "sr": "UFK Studentski Grad",
+    "logo": "ufk_studentski_grad_pu3r.png",
+    "season": false,
+    "stadium_ru": "ФК  Бежания",
+    "stadium_sr": "FK  Bežanija"
   }
 ]
