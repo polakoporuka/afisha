@@ -13,8 +13,8 @@
     "ru": "Сити Спорт Клуб",
     "sr": "City Sport Klub",
     "logo": "city_sport.png",
-    "stadium_ru": "",
-    "stadium_sr": "",
+    "stadium_ru": "Стадион ФК ПКБ Ковилово",
+    "stadium_sr": "Stadion FK PKB Kovilovo",
     "season": true
   },
   {
@@ -22,8 +22,8 @@
     "ru": "ФК Хайдук",
     "sr": "FK Hajduk",
     "logo": "hajduk.png",
-    "stadium_ru": "",
-    "stadium_sr": "",
+    "stadium_ru": "Стадион ФК Хайдук (Лион)",
+    "stadium_sr": "Stadion FK Hajduk (Lion)",
     "season": true
   },
   {
@@ -31,8 +31,8 @@
     "ru": "ФК Палилулац",
     "sr": "FK Palilulac",
     "logo": "palilulac.png",
-    "stadium_ru": "",
-    "stadium_sr": "",
+    "stadium_ru": "Стадион ФК Палилулац",
+    "stadium_sr": "Stadion FK Palilulac",
     "season": true
   },
   {
@@ -40,8 +40,8 @@
     "ru": "ФК Омладинац 1961",
     "sr": "FK Omladinac 1961",
     "logo": "omladinac.png",
-    "stadium_ru": "",
-    "stadium_sr": "",
+    "stadium_ru": "Стадион ФК Омладинац 1961",
+    "stadium_sr": "Stadion FK Omladinac 1961",
     "season": true
   },
   {
@@ -58,8 +58,8 @@
     "ru": "ФК Ресник",
     "sr": "FK Resnik",
     "logo": "resnik.png",
-    "stadium_ru": "",
-    "stadium_sr": "",
+    "stadium_ru": "Стадион ФК Ресник",
+    "stadium_sr": "Stadion FK Resnik",
     "season": true
   },
   {
